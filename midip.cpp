@@ -6,6 +6,8 @@
 #include <string>
 #include <cstddef>
 #include <initializer_list>
+#include <chrono>
+#include <thread>
 
 #include "fmt/format.h"
 
@@ -374,9 +376,9 @@ auto callback([[maybe_unused]]ma_device* device, [[maybe_unused]]void* output, [
 
 static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> void {
     mdp::midi midi{};
-    midi.open("./Super Mario Bros. (Overworld Theme & MIDI).mid");
+    midi.open("./Super_Mario_Bros.mid");
 
-#ifndef MDP_MINIAUDIO
+#ifdef MDP_MINIAUDIO
     ma_waveform_config waveform_config{};
     ma_waveform waveform{};
     ma_device device{};
