@@ -119,7 +119,7 @@ enum class event_type : std::uint8_t {
     system_exclusive = 0xF0,
 };;
 
-auto operator==(std::uint8_t a, event_type b) -> bool {
+constexpr auto operator==(std::uint8_t a, event_type b) -> bool {
     using T = std::underlying_type_t<event_type>;
     return static_cast<T>(b) == a;
 }
@@ -376,7 +376,7 @@ auto callback([[maybe_unused]]ma_device* device, [[maybe_unused]]void* output, [
 
 static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> void {
     mdp::midi midi{};
-    midi.open("./Super_Mario_Bros.mid");
+    midi.open("./SuperMarioBros.mid");
 
 #ifdef MDP_MINIAUDIO
     ma_waveform_config waveform_config{};
