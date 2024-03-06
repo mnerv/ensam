@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <chrono>
 #include <thread>
+#include <limits>
 
 #include "fmt/format.h"
 
@@ -26,8 +27,17 @@
 //      https://en.wikipedia.org/wiki/Variable-length_quantity
 //   Programming MIDI by javdix9
 //      https://youtu.be/040BKtnDdg0?si=AdAnEDt5iF9dta0T
+//
+// MIDI have 128 notes in the MIDI standard (0-127).
+//
+// f_n = f_0 \cdot 2^{\frac{n_m - 69}{12}}
+//
+// Source: https://www.translatorscafe.com/unit-converter/en-US/calculator/note-frequency/
 
 namespace mdp {
+template <typename T>
+using limits = std::numeric_limits<T>;
+
 class istrm {
 public:
     istrm(std::string const& path) : m_data(), m_cursor(0), m_end(0) {
@@ -117,7 +127,7 @@ enum class event_type : std::uint8_t {
     channel_pressure = 0xD0,
     pitch_bend       = 0xE0,
     system_exclusive = 0xF0,
-};;
+};
 
 constexpr auto operator==(std::uint8_t a, event_type b) -> bool {
     using T = std::underlying_type_t<event_type>;
@@ -143,12 +153,29 @@ enum class meta_type : std::uint8_t {
     seq_specific    = 0x7F,  // Sequencer Specific Meta-Event
 };
 
+struct midi_event {
+    event_type type;
+    std::uint32_t dt;
+    std::size_t index;
+};
+
+struct midi_note {
+   std::uint8_t channel;
+   std::uint8_t key;
+   std::uint8_t velocity;
+};
+
 struct mtrk {
     char const* type = "MTrk";
+    std::uint32_t ticks{0};
+    std::uint32_t tempo{};
+    std::vector<midi_event> events{};
+    std::vector<midi_note> notes{};
 
     auto str() const -> std::string {
-        return fmt::format("{} {{ }}",
-                           type);
+        auto const bpm = tempo != 0 ? 60'000'000/tempo : 0;
+        return fmt::format("{} {{ tempo: {} us, BPM: {}, events: {}, length: {} }}",
+                           type, tempo, bpm, events.size(), ticks);
     }
 
     static auto read(mdp::istrm& istrm) -> mtrk {
@@ -167,11 +194,14 @@ struct mtrk {
 
 private:
     auto parse(mdp::istrm& istrm) -> void {
-        [[maybe_unused]]std::uint32_t dt = 0;
+        std::uint32_t dt = 0;
         std::uint8_t prev_status = 0x00;
         istrm.set_max_consume(m_byte_size);
+        std::uint32_t time = 0;
+
         while (istrm.has_next()) {
             dt = istrm.read_vlq();
+            time += dt;
             auto status = istrm.peek();
             if (status < 0x80) status = prev_status;
 
@@ -181,6 +211,8 @@ private:
                 std::uint8_t channel = istrm.peek_consume() & 0x0F;
                 std::uint8_t program = istrm.peek_consume() & 0x7F;
                 fmt::print("Program Change CH: {}, PR: {}\n", channel, program);
+
+                events.push_back({event_type::program_change, dt, mdp::limits<std::size_t>::max()});
             } else if ((status & 0xF0) == event_type::note_on) {
                 prev_status = status;
 
@@ -188,6 +220,9 @@ private:
                 std::uint8_t key = istrm.peek_consume() & 0x7F;
                 std::uint8_t vel = istrm.peek_consume() & 0x7F;
                 fmt::print("{} Note On CH: {}, Key: {}, Vel {}\n", dt, channel, key, vel);
+
+                events.push_back({event_type::note_on, dt, notes.size()});
+                notes.push_back({channel, key, vel});
             } else if ((status & 0xF0) == event_type::note_off) {
                 prev_status = status;
 
@@ -195,6 +230,9 @@ private:
                 std::uint8_t key = istrm.peek_consume() & 0x7F;
                 std::uint8_t vel = istrm.peek_consume() & 0x7F;
                 fmt::print("{} Note Off CH: {}, Key: {}, Vel {}\n", dt, channel, key, vel);
+
+                events.push_back({event_type::note_off, dt, notes.size()});
+                notes.push_back({channel, key, vel});
             } else if ((status & 0xF0) == event_type::control_change) {
                 prev_status = status;
 
@@ -202,6 +240,8 @@ private:
                 std::uint8_t c = istrm.peek_consume() & 0x7F;
                 std::uint8_t v = istrm.peek_consume() & 0x7F;
                 fmt::print("{} Channel Mode Messages CH: {}, c: {}, v: {}\n", dt, channel, c, v);
+
+                events.push_back({event_type::control_change, dt, mdp::limits<std::size_t>::max()});
             } else if ((status & 0xF0) == event_type::pitch_bend) {
                 prev_status = status;
 
@@ -209,8 +249,11 @@ private:
                 std::uint8_t l = istrm.peek_consume() & 0x7F;
                 std::uint8_t m = istrm.peek_consume() & 0x7F;
                 fmt::print("{} Pitch Wheel Change CH: {}, l: {}, m: {}\n", dt, channel, l, m);
+
+                events.push_back({event_type::pitch_bend, dt, 0});
             } else if ((status & 0xF0) == event_type::system_exclusive) {
                 prev_status = 0x00;
+                events.push_back({event_type::system_exclusive, dt, mdp::limits<std::size_t>::max()});
 
                 if (istrm.peek() == 0xFF) {
                     istrm.consume();
@@ -261,9 +304,9 @@ private:
                         case meta_type::tempo: {
                             std::uint8_t tempo_data[3]{0};
                             istrm.peek_consume(tempo_data, sizeof tempo_data);
-                            std::uint32_t const tempo = (std::uint32_t(tempo_data[2]) << 0)
-                                                      | (std::uint32_t(tempo_data[1]) << 8)
-                                                      | (std::uint32_t(tempo_data[0]) << 16);
+                            tempo = (std::uint32_t(tempo_data[2]) << 0)
+                                  | (std::uint32_t(tempo_data[1]) << 8)
+                                  | (std::uint32_t(tempo_data[0]) << 16);
                             fmt::print("Set Tempo {} us ({} BPM)\n", tempo, 60'000'000/tempo);
                             break;
                         }
@@ -306,6 +349,7 @@ private:
             }
         }
         istrm.reset_max_consume();
+        ticks = time;
     }
 
 private:
@@ -361,6 +405,9 @@ public:
             fmt::print("{}\n", track.str());
     }
 
+    auto header() const -> mthd const& { return m_header; }
+    auto tracks() const -> std::vector<mtrk> const& { return m_tracks; }
+
 private:
     mthd m_header{};
     std::vector<mtrk> m_tracks{};
@@ -399,15 +446,33 @@ static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> 
         throw std::runtime_error("Failed to start playback device.\n");
     }
 
+    (void)waveform_config;
     using namespace std::chrono_literals;
-    for (auto i = 0; i < 128; ++i) {
-        waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.05, 440.0);
+
+    auto const tpb = midi.header().division;
+    auto const& track = midi.tracks()[1];
+    auto const tempo =  midi.tracks()[0].tempo;
+
+    std::uint32_t dt = 0;
+    for (auto const& event : track.events) {
         ma_waveform_init(&waveform_config, &waveform);
-        std::this_thread::sleep_for(50ms);
-        waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.0, 440.0);
-        ma_waveform_init(&waveform_config, &waveform);
-        std::this_thread::sleep_for(50ms);
+        dt = (event.dt * tempo) / (1000 * tpb);
+        if (event.type == mdp::event_type::note_on || event.type == mdp::event_type::note_off) {
+            auto const& note = track.notes[event.index];
+            auto const freq = 440.0 * std::pow(2.0, (note.key - 69)/12.0);
+
+            fmt::print("key: {}, freq: {}\n", note.key, freq);
+
+            if (event.type == mdp::event_type::note_on)
+                waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.05, freq);
+            else
+                waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.0, freq);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(dt));
     }
+
+    waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.0, 440.0);
+    ma_waveform_init(&waveform_config, &waveform);
 
     ma_device_uninit(&device);
 #endif
