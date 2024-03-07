@@ -423,7 +423,7 @@ auto callback([[maybe_unused]]ma_device* device, [[maybe_unused]]void* output, [
 
 static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> void {
     mdp::midi midi{};
-    midi.open("./SuperMarioBros.mid");
+    midi.open("./Overworld.mid");
 
 #ifdef MDP_MINIAUDIO
     ma_waveform_config waveform_config{};
@@ -446,7 +446,6 @@ static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> 
         throw std::runtime_error("Failed to start playback device.\n");
     }
 
-    (void)waveform_config;
     using namespace std::chrono_literals;
 
     auto const tpb = midi.header().division;
@@ -455,20 +454,20 @@ static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> 
 
     std::uint32_t dt = 0;
     for (auto const& event : track.events) {
-        ma_waveform_init(&waveform_config, &waveform);
-        dt = (event.dt * tempo) / (1000 * tpb);
+        dt = (event.dt * tempo) / tpb;
         if (event.type == mdp::event_type::note_on || event.type == mdp::event_type::note_off) {
             auto const& note = track.notes[event.index];
             auto const freq = 440.0 * std::pow(2.0, (note.key - 69)/12.0);
 
-            fmt::print("key: {}, freq: {}\n", note.key, freq);
+            fmt::print("key: {}, freq: {:.3f}, ch: {}, dt: {} ms\n", note.key, freq, note.channel, double(dt) / 1000.0);
 
             if (event.type == mdp::event_type::note_on)
                 waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.05, freq);
             else
                 waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.0, freq);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(dt));
+        std::this_thread::sleep_for(std::chrono::microseconds(dt));
+        ma_waveform_init(&waveform_config, &waveform);
     }
 
     waveform_config = ma_waveform_config_init(device.playback.format, device.playback.channels, device.sampleRate, ma_waveform_type_square, 0.0, 440.0);
