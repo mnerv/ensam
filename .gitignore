@@ -40,3 +40,6 @@ compile_commands.json
 # JetBrains Fleet
 .fleet
 .cache
+
+# MIDI Files
+*.mid
