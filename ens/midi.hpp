@@ -1,16 +1,5 @@
 /**
  * MIDI Parser, for use only with this project as it is made for learning only.
- *
- * Copyright (c) 2024 porter@nrz.se
- */
-#ifndef ENS_MIDI_HPP
-#define ENS_MIDI_HPP
-
-#include <vector>
-#include <string>
-
-namespace ens {
-/**
  * Resources:
  *   Standard MIDI-File Format Spec. 1.1
  *      https://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html#BMA1_
@@ -23,13 +12,37 @@ namespace ens {
  *   Programming MIDI by javdix9
  *      https://youtu.be/040BKtnDdg0?si=AdAnEDt5iF9dta0T
  *
+ * Formula
+ *
+ * f_n = f_0 \cdot 2^{n/12}
+ *
+ * where f_n is the frequency of the note, which is n semitones (or half steps)
+ * away from the standard pitch A440. f_0 is the frequency of a fixed note,
+ * which is used as a standard for tuning. It is usually a standard
+ * (also called concert) pitch of 440 Hz. n is the number of semitones
+ * (half steps) from the standard pitch; n > 0 for notes higher than the
+ * standard pitch, and n < 0 for notes lower than the standard pitch.
+ *
  * MIDI have 128 notes in the MIDI standard (0-127).
  *
  * f_n = f_0 \cdot 2^{\frac{n_m - 69}{12}}
  *
  * Source: https://www.translatorscafe.com/unit-converter/en-US/calculator/note-frequency/
+ *
+ * Copyright (c) 2024 porter@nrz.se
  */
+#ifndef ENS_MIDI_HPP
+#define ENS_MIDI_HPP
 
+#include <vector>
+#include <string>
+#include <fstream>
+
+namespace ens {
+/**
+ * Input stream for reading binary file, read string and variable length
+ * quantity values.
+ */
 class istrm {
 public:
     istrm(std::string const& path);

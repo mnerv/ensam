@@ -278,7 +278,7 @@ auto mthd::str() const -> std::string {
 
 auto mthd::read(istrm& istrm) -> mthd {
     mthd chunk{};
-    char type_buffer[5]{0};
+    char type_buffer[5]{0};  // File Type
     istrm.peek(reinterpret_cast<std::uint8_t*>(type_buffer), sizeof type_buffer - 1);
     if (std::string_view{type_buffer} != std::string_view{chunk.type})
         throw std::runtime_error(fmt::format("Not a MIDI file: type {}", std::string_view{type_buffer}));

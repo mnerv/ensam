@@ -91,6 +91,7 @@ if (NOT MSVC)
         "-Wno-implicit-int-conversion"
         "-Wno-shorten-64-to-32"
         "-Wno-language-extension-token"
+        "-Wno-conversion"
     )
 else()
     set(BASE_OPTIONS
@@ -105,7 +106,7 @@ endif()
 set(HEADERS
     ens/midi.hpp
     ens/utils.hpp
-) 
+)
 set(SOURCES
     ens/midi.cpp
 )

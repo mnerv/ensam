@@ -1,14 +1,19 @@
 /**
+ * Commonly used utilties.
+ *
  * Copyright (c) 2024 porter@nrz.se
  */
 #ifndef ENS_UTILS_HPP
 #define ENS_UTILS_HPP
 
+#include <type_traits>
 #include <cstddef>
 #include <limits>
+#include <numbers>
 #include <memory>
 
 namespace ens {
+
 template <typename T>
 concept Integral = std::is_integral<T>::value;
 
@@ -17,7 +22,7 @@ inline constexpr auto len(T (&)[N]) -> std::size_t {
     return N;
 }
 
-inline constexpr auto bit_on(Integral auto const& position) {
+inline constexpr auto bit_set(Integral auto const& position) {
     return 1 << position;
 }
 
@@ -25,8 +30,16 @@ inline constexpr auto bit_level(Integral auto const& reg, Integral auto const& m
     return (reg & ~mask) | (data & mask);
 }
 
+// Aliases
+namespace nums = std::numbers;
+
 template <typename T>
 using lim = std::numeric_limits<T>;
+
+inline constexpr auto pi = std::numbers::pi;
+
+template <typename T>
+inline constexpr auto pi_v = std::numbers::pi_v<T>;
 
 template <typename T>
 using ref = std::shared_ptr<T>;

@@ -7,8 +7,9 @@
 #include <chrono>
 
 #include "fmt/format.h"
-
 #include "asio.hpp"
+
+#include "ens/utils.hpp"
 
 using namespace std::chrono_literals;
 
