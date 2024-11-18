@@ -10,23 +10,25 @@
 #include <string>
 
 namespace ens {
-// Resources:
-//   Standard MIDI-File Format Spec. 1.1
-//      https://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html#BMA1_
-//   MIDI Files Specification
-//      http://www.somascape.org/midi/tech/mfile.html
-//   Outline of the Standard MIDI File Structure
-//      https://www.ccarh.org/courses/253/handout/smf/
-//   Variable-length quantity
-//      https://en.wikipedia.org/wiki/Variable-length_quantity
-//   Programming MIDI by javdix9
-//      https://youtu.be/040BKtnDdg0?si=AdAnEDt5iF9dta0T
-//
-// MIDI have 128 notes in the MIDI standard (0-127).
-//
-// f_n = f_0 \cdot 2^{\frac{n_m - 69}{12}}
-//
-// Source: https://www.translatorscafe.com/unit-converter/en-US/calculator/note-frequency/
+/**
+ * Resources:
+ *   Standard MIDI-File Format Spec. 1.1
+ *      https://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html#BMA1_
+ *   MIDI Files Specification
+ *      http://www.somascape.org/midi/tech/mfile.html
+ *   Outline of the Standard MIDI File Structure
+ *      https://www.ccarh.org/courses/253/handout/smf/
+ *   Variable-length quantity
+ *      https://en.wikipedia.org/wiki/Variable-length_quantity
+ *   Programming MIDI by javdix9
+ *      https://youtu.be/040BKtnDdg0?si=AdAnEDt5iF9dta0T
+ *
+ * MIDI have 128 notes in the MIDI standard (0-127).
+ *
+ * f_n = f_0 \cdot 2^{\frac{n_m - 69}{12}}
+ *
+ * Source: https://www.translatorscafe.com/unit-converter/en-US/calculator/note-frequency/
+ */
 
 class istrm {
 public:

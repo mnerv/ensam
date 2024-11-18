@@ -29,7 +29,7 @@ list(APPEND FETCH_CONTENTS utf8cpp)
 FetchContent_Declare(
     asio
     GIT_REPOSITORY https://github.com/mononerv/asio.git
-    GIT_TAG        37380337ae0cc601b5e40e4e7739ab7b0a12cb63
+    GIT_TAG        bcb8a933b27021d77f2d183991d815ea6c8cdc97
 )
 list(APPEND FETCH_CONTENTS asio)
 FetchContent_Declare(
@@ -52,6 +52,28 @@ list(APPEND FETCH_CONTENTS ctre)
 FetchContent_MakeAvailable(${FETCH_CONTENTS})
 find_package(Threads REQUIRED)
 
+# Group dependencies in Visual Studio and Xcode
+if (CMAKE_GENERATOR MATCHES "Visual Studio" OR CMAKE_GENERATOR MATCHES "Xcode")
+    set_target_properties(fmt PROPERTIES FOLDER deps)
+    set_target_properties(stb PROPERTIES FOLDER deps)
+endif()
+
+set(BASE_DEFINITIONS "ASIO_STANDALONE")
+
+if (APPLE)
+    message("Platform Apple")
+elseif (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)  # Linux, BSD, Solaris, Minix
+    message("Platform Unix")
+elseif (WIN32)
+    message("Platform Windows")
+    string(JOIN " " BASE_DEFINTIONS
+        ${BASE_DEFINTIONS}
+        "_WIN32_WINNT=0x0A00"
+    )
+else()
+    message(FATAL_ERROR "Unkown platform!")
+endif()
+
 # Compiler specific options
 if (NOT MSVC)
     set(BASE_OPTIONS
@@ -63,6 +85,12 @@ if (NOT MSVC)
         "-Werror"
         # fmt warnings
         "-Wno-unknown-attributes"
+        # asio warnings
+        "-Wno-sign-conversion"
+        "-Wno-shadow"
+        "-Wno-implicit-int-conversion"
+        "-Wno-shorten-64-to-32"
+        "-Wno-language-extension-token"
     )
 else()
     set(BASE_OPTIONS
@@ -85,7 +113,11 @@ add_library(ens OBJECT ${HEADERS} ${SOURCES})
 target_include_directories(ens PRIVATE ${PROJECT_SOURCE_DIR})
 target_compile_features(ens PRIVATE cxx_std_23)
 target_compile_options(ens PRIVATE ${BASE_OPTIONS})
-target_compile_definitions(ens PRIVATE $<$<BOOL:${USE_MINIAUDIO}>:"MDP_MINIAUDIO">)
+target_compile_definitions(ens
+    PRIVATE
+    ${BASE_DEFINTIONS}
+    $<$<BOOL:${USE_MINIAUDIO}>:"MDP_MINIAUDIO">
+)
 target_link_libraries(ens
     PUBLIC
     fmt
@@ -104,6 +136,7 @@ add_executable(ensam ${HEADERS} ${SOURCES})
 target_include_directories(ensam PRIVATE ${PROJECT_SOURCE_DIR})
 target_compile_features(ensam PRIVATE cxx_std_23)
 target_compile_options(ensam PRIVATE ${BASE_OPTIONS})
+target_compile_definitions(ensam PRIVATE ${BASE_DEFINTIONS})
 target_link_libraries(ensam PRIVATE ens)
 source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${HEADERS} ${SOURCES})
 
@@ -113,5 +146,6 @@ add_executable(maestro ${HEADERS} ${SOURCES})
 target_include_directories(maestro PRIVATE ${PROJECT_SOURCE_DIR})
 target_compile_features(maestro PRIVATE cxx_std_23)
 target_compile_options(maestro PRIVATE ${BASE_OPTIONS})
+target_compile_definitions(maestro PRIVATE ${BASE_DEFINTIONS})
 target_link_libraries(maestro PRIVATE ens)
 source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${HEADERS} ${SOURCES})
