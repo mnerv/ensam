@@ -12,7 +12,7 @@
  *   Programming MIDI by javdix9
  *      https://youtu.be/040BKtnDdg0?si=AdAnEDt5iF9dta0T
  *
- * Formula
+ * Basic Formula
  *
  * f_n = f_0 \cdot 2^{n/12}
  *
@@ -29,6 +29,13 @@
  *
  * Source: https://www.translatorscafe.com/unit-converter/en-US/calculator/note-frequency/
  *
+ * 88-key Piano Formula
+ *
+ * f_n = f_0 \cdot 2^{\frac{n_m - 49}{12}}
+ *
+ * where f_0 is concert pitch with value of A4 (440 Hz). n_m is the piano key
+ * number and 49 is the A4 key position from the left on the piano.
+ *
  * Copyright (c) 2024 porter@nrz.se
  */
 #ifndef ENS_MIDI_HPP
@@ -40,44 +47,44 @@
 #include <fstream>
 
 namespace ens {
-#define ENUMURATOR_MUSIC_SEMITONES     \
-    ENUMURATOR_MUSIC_SEMITONE(c , "C" )  \
-    ENUMURATOR_MUSIC_SEMITONE(cs, "C#")  \
-    ENUMURATOR_MUSIC_SEMITONE(d , "D" )  \
-    ENUMURATOR_MUSIC_SEMITONE(ds, "D#")  \
-    ENUMURATOR_MUSIC_SEMITONE(e , "E" )  \
-    ENUMURATOR_MUSIC_SEMITONE(f , "F" )  \
-    ENUMURATOR_MUSIC_SEMITONE(fs, "F#")  \
-    ENUMURATOR_MUSIC_SEMITONE(g , "G" )  \
-    ENUMURATOR_MUSIC_SEMITONE(gs, "G#")  \
-    ENUMURATOR_MUSIC_SEMITONE(a , "A" )  \
-    ENUMURATOR_MUSIC_SEMITONE(as, "A#")  \
-    ENUMURATOR_MUSIC_SEMITONE(b , "B" )
+#define ENS_ENUMURATOR_MUSIC_PITCHES      \
+    ENS_ENUMURATOR_MUSIC_PITCH(c , "C" )  \
+    ENS_ENUMURATOR_MUSIC_PITCH(cs, "C#")  \
+    ENS_ENUMURATOR_MUSIC_PITCH(d , "D" )  \
+    ENS_ENUMURATOR_MUSIC_PITCH(ds, "D#")  \
+    ENS_ENUMURATOR_MUSIC_PITCH(e , "E" )  \
+    ENS_ENUMURATOR_MUSIC_PITCH(f , "F" )  \
+    ENS_ENUMURATOR_MUSIC_PITCH(fs, "F#")  \
+    ENS_ENUMURATOR_MUSIC_PITCH(g , "G" )  \
+    ENS_ENUMURATOR_MUSIC_PITCH(gs, "G#")  \
+    ENS_ENUMURATOR_MUSIC_PITCH(a , "A" )  \
+    ENS_ENUMURATOR_MUSIC_PITCH(as, "A#")  \
+    ENS_ENUMURATOR_MUSIC_PITCH(b , "B" )
 
-enum class semitone : std::uint8_t {
-    none = 0,
-#define ENUMURATOR_MUSIC_SEMITONE(key, str) key,
-    ENUMURATOR_MUSIC_SEMITONES
-#undef ENUMURATOR_MUSIC_SEMITONE
+enum class pitch : std::uint8_t {
+#define ENS_ENUMURATOR_MUSIC_PITCH(key, str) key,
+    ENS_ENUMURATOR_MUSIC_PITCHES
+#undef ENS_ENUMURATOR_MUSIC_PITCH
 };
 
-constexpr auto semitone_str(semitone tone) -> char const* {
-    switch (tone) {
-#define ENUMURATOR_MUSIC_SEMITONE(key, str) case semitone::key: return str;
-    ENUMURATOR_MUSIC_SEMITONES
-#undef ENUMURATOR_MUSIC_SEMITONE
-        default: return "unknown";
+constexpr auto note_str(ens::pitch pitch) noexcept -> char const* {
+    switch (pitch) {
+#define ENS_ENUMURATOR_MUSIC_PITCH(key, str) case ens::pitch::key: return str;
+    ENS_ENUMURATOR_MUSIC_PITCHES
+#undef ENS_ENUMURATOR_MUSIC_PITCH
+        default: return "invalid";
     }
 }
+#undef ENS_ENUMURATOR_MUSIC_PITCHES
 
-struct pitch {
-    semitone tone;
-    std::uint32_t octave;
+struct note {
+    ens::pitch pitch;
+    std::int8_t octave;
 
-    pitch(semitone tone, std::uint8_t octave) : tone(tone), octave(octave) {}
+    constexpr note(ens::pitch p, std::int8_t o) : pitch(p), octave(o) {}
 
     auto str() const -> std::string {
-        return std::string(semitone_str(tone)) + std::to_string(octave);
+        return std::string(note_str(pitch)) + std::to_string(octave);
     }
 };
 
@@ -196,6 +203,13 @@ private:
 constexpr auto midi_to_freq(std::uint8_t n) -> std::double_t {
     auto constexpr f0 = 440.0;
     return f0 * std::pow(2.0, (std::double_t(n) - 69.0) / 12.0);
+}
+
+constexpr auto midi_to_note(std::uint8_t n) -> note {
+    return {
+        ens::pitch(n % 12),
+        std::int8_t(n / 12 - 2 + ((n < 12) * 1))
+    };
 }
 }
 
