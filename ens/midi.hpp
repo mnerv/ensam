@@ -34,11 +34,53 @@
 #ifndef ENS_MIDI_HPP
 #define ENS_MIDI_HPP
 
+#include <cmath>
 #include <vector>
 #include <string>
 #include <fstream>
 
 namespace ens {
+#define ENUMURATOR_MUSIC_SEMITONES     \
+    ENUMURATOR_MUSIC_SEMITONE(c , "C" )  \
+    ENUMURATOR_MUSIC_SEMITONE(cs, "C#")  \
+    ENUMURATOR_MUSIC_SEMITONE(d , "D" )  \
+    ENUMURATOR_MUSIC_SEMITONE(ds, "D#")  \
+    ENUMURATOR_MUSIC_SEMITONE(e , "E" )  \
+    ENUMURATOR_MUSIC_SEMITONE(f , "F" )  \
+    ENUMURATOR_MUSIC_SEMITONE(fs, "F#")  \
+    ENUMURATOR_MUSIC_SEMITONE(g , "G" )  \
+    ENUMURATOR_MUSIC_SEMITONE(gs, "G#")  \
+    ENUMURATOR_MUSIC_SEMITONE(a , "A" )  \
+    ENUMURATOR_MUSIC_SEMITONE(as, "A#")  \
+    ENUMURATOR_MUSIC_SEMITONE(b , "B" )
+
+enum class semitone : std::uint8_t {
+    none = 0,
+#define ENUMURATOR_MUSIC_SEMITONE(key, str) key,
+    ENUMURATOR_MUSIC_SEMITONES
+#undef ENUMURATOR_MUSIC_SEMITONE
+};
+
+constexpr auto semitone_str(semitone tone) -> char const* {
+    switch (tone) {
+#define ENUMURATOR_MUSIC_SEMITONE(key, str) case semitone::key: return str;
+    ENUMURATOR_MUSIC_SEMITONES
+#undef ENUMURATOR_MUSIC_SEMITONE
+        default: return "unknown";
+    }
+}
+
+struct pitch {
+    semitone tone;
+    std::uint32_t octave;
+
+    pitch(semitone tone, std::uint8_t octave) : tone(tone), octave(octave) {}
+
+    auto str() const -> std::string {
+        return std::string(semitone_str(tone)) + std::to_string(octave);
+    }
+};
+
 /**
  * Input stream for reading binary file, read string and variable length
  * quantity values.
@@ -150,6 +192,11 @@ private:
     mthd m_header{};
     std::vector<mtrk> m_tracks{};
 };
+
+constexpr auto midi_to_freq(std::uint8_t n) -> std::double_t {
+    auto constexpr f0 = 440.0;
+    return f0 * std::pow(2.0, (std::double_t(n) - 69.0) / 12.0);
+}
 }
 
 #endif

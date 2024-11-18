@@ -6,6 +6,12 @@
 
 #include "fmt/format.h"
 
+class buzzer {
+public:
+
+private:
+};
+
 static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> void {
     fmt::print("Hello, World!\n");
 }

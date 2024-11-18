@@ -1,11 +1,10 @@
 # ensam
 
-`ensam` is a learning project on how to parse MIDI files and play them. 
+`ensam` is a learning project on how to parse MIDI files and play them.
 
 ## Requirements
 
   - [cmake](https://cmake.org/)
-
 
 ## Development
 
