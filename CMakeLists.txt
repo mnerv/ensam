@@ -62,12 +62,24 @@ set(BASE_DEFINITIONS "ASIO_STANDALONE")
 
 if (APPLE)
     message("Platform Apple")
+    string(JOIN " " BASE_DEFINTIONS
+        ${BASE_DEFINTIONS}
+        "ENS_PLATFORM=Apple"
+    )
+    set(IS_UNIX true)
 elseif (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)  # Linux, BSD, Solaris, Minix
     message("Platform Unix")
+    string(JOIN " " BASE_DEFINTIONS
+        ${BASE_DEFINTIONS}
+        "ENS_PLATFORM=Linux"
+    )
+    set(IS_UNIX true)
+elseif (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)  # Linux, BSD, Solaris, Minix
 elseif (WIN32)
     message("Platform Windows")
     string(JOIN " " BASE_DEFINTIONS
         ${BASE_DEFINTIONS}
+        "ENS_PLATFORM=Windows"
         "_WIN32_WINNT=0x0A00"
     )
 else()
@@ -104,10 +116,14 @@ else()
 endif()
 
 set(HEADERS
+    $<$<BOOL:${IS_UNIX}>:ens/drv/sysfs.hpp>
+
     ens/midi.hpp
     ens/utils.hpp
 )
 set(SOURCES
+    $<$<BOOL:${IS_UNIX}>:ens/drv/sysfs.cpp>
+
     ens/midi.cpp
 )
 add_library(ens OBJECT ${HEADERS} ${SOURCES})
