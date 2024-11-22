@@ -68,7 +68,7 @@ private:
     auto listener(std::shared_ptr<conn> conn, std::error_code const& ec) -> void {
         if (!ec) {
             fmt::print("new connection!\n");
-            fmt::print("    ip: {}\n", conn->socket().remote_endpoint().address().to_v4().to_string());
+            fmt::print("    ip: {}:{}\n", conn->socket().remote_endpoint().address().to_v4().to_string(), conn->socket().remote_endpoint().port());
 
             conn->start();
             m_conns.push_back(conn);
@@ -88,6 +88,7 @@ static auto entry([[maybe_unused]]std::vector<std::string_view> const& args) -> 
     sig.async_wait([&] (auto, auto) { ctx.stop(); });
 
     serv server(ctx);
+    server.listen();
 
     ctx.run();
 }
